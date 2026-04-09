@@ -1,0 +1,18 @@
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700;1,17..18,400..700&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Outfit:wght@100..900&family=Source+Code+Pro:ital,wght@0,200..900;1,200..900&display=swap');
+@import "tailwindcss"
+
+@theme{
+  --font-display: "Inter",sans-serif;
+  --breakpoint-3xl: 1920px;
+  --color-primary:#FF9324;
+}
+
+@layer base{
+  html{
+    font-family: var(--font-display);
+  }
+
+  body{
+    background-color:#fcfbfc;
+  }
+}
