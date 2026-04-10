@@ -6,6 +6,7 @@ import connectDb from "./config/db.js";
 import { fileURLToPath } from "url";
 
 import authRoutes from "./routes/authRoutes.js";
+import bookRoutes from "./routes/bookRoutes.js";
 //models
 
 const __filename = fileURLToPath(import.meta.url);
@@ -22,6 +23,7 @@ app.use(express.json());
 
 //Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/book", bookRoutes);
 
 //static folder for uploads
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
