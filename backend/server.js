@@ -5,6 +5,9 @@ import path from "path";
 import connectDb from "./config/db.js";
 import { fileURLToPath } from "url";
 
+import authRoutes from "./routes/authRoutes.js";
+//models
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -16,6 +19,9 @@ connectDb();
 
 app.use(cors());
 app.use(express.json());
+
+//Routes
+app.use("/api/auth", authRoutes);
 
 //static folder for uploads
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
