@@ -23,7 +23,7 @@ app.use(express.json());
 
 //Routes
 app.use("/api/auth", authRoutes);
-app.use("/api/book", bookRoutes);
+app.use("/api/books", bookRoutes);
 
 //static folder for uploads
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));

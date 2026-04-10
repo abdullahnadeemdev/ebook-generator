@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import User from "../models/User";
+import User from "../models/User.js";
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.SECRETKEY, {
@@ -15,20 +15,20 @@ const registerUser = async (req, res) => {
   const { name, email, password } = req.body;
 
   try {
-    if (!name || !email || !pasword) {
-      res.status(400).json({ msg: "Please fill in all the fields" });
+    if (!name || !email || !password) {
+      return res.status(400).json({ msg: "Please fill in all the fields" });
     }
 
     const userExists = await User.findOne({ email });
 
     if (userExists) {
-      res.status(400).json({ msg: "User already exists" });
+      return res.status(400).json({ msg: "User already exists" });
     }
 
     const user = await User.create({ name, email, password });
 
     if (user) {
-      res.status(201).json({
+      return res.status(201).json({
         msg: "User created successfully",
         token: generateToken(user._id),
       });
@@ -36,7 +36,7 @@ const registerUser = async (req, res) => {
       res.status(400).json({ msg: "Invalid user data" });
     }
   } catch (error) {
-    res.status(500).json({ msg: "SERVER ERROR" });
+    res.status(500).json({ msg: "SERVER ERROR", err: error.message });
   }
 };
 
@@ -49,13 +49,18 @@ const loginUser = async (req, res) => {
   try {
     const user = await User.findOne({ email }).select("+password");
 
-    if (user && (await User.matchPassword(password))) {
-      res.json({ msg: "Login Sucesssful", _id: user._id, name: user.name });
+    if (user && (await user.matchPassword(password))) {
+      res.json({
+        msg: "Login Sucesssful",
+        _id: user._id,
+        name: user.name,
+        token: generateToken(user._id),
+      });
     } else {
       return res.status(400).json({ msg: "Invalid credentials" });
     }
   } catch (error) {
-    res.status(500).json({ msg: "SERVER ERROR" });
+    res.status(500).json({ msg: "SERVER ERROR", err: error.message });
   }
 };
 
@@ -88,11 +93,11 @@ const getProfile = async (req, res) => {
 
 const updateUserProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user._id);
     if (user) {
       user.name = req.body.name || user.name;
 
-      const updatedUser = await User.save();
+      const updatedUser = await user.save();
 
       res.json({
         msg: "updation success",
@@ -100,9 +105,10 @@ const updateUserProfile = async (req, res) => {
         name: updatedUser.name,
       });
     } else {
-      return res.json({ msg: "updation failed" });
+      return res.status(404).json({ msg: "updation failed" });
     }
   } catch (error) {
+    console.log(error);
     res.status(500).json({ msg: "SERVER ERROR" });
   }
 };
