@@ -7,6 +7,8 @@ import { fileURLToPath } from "url";
 
 import authRoutes from "./routes/authRoutes.js";
 import bookRoutes from "./routes/bookRoutes.js";
+import aiRoutes from "./routes/aiRoutes.js";
+import exportRoutes from "./routes/exportRoutes.js";
 //models
 
 const __filename = fileURLToPath(import.meta.url);
@@ -24,6 +26,8 @@ app.use(express.json());
 //Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/books", bookRoutes);
+app.use("/api/ai", aiRoutes);
+app.use("/api/export", exportRoutes);
 
 //static folder for uploads
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
