@@ -1,7 +1,12 @@
 import React from "react";
+import Navbar from "../../components/layout/Navbar/Navbar";
 
-const index = () => {
-  return <div>index</div>;
+const LandingPage = () => {
+  return (
+    <div>
+      <Navbar />
+    </div>
+  );
 };
 
-export default index;
+export default LandingPage;
