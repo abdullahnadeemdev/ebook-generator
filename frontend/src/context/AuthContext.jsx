@@ -8,7 +8,6 @@ import {
 import { Navigate } from "react-router";
 
 const AuthContext = createContext();
-const navigate = Navigate();
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -33,7 +32,7 @@ export const AuthProvider = ({ children }) => {
       const userStr = localStorage.getItem("user");
 
       if (token && userStr) {
-        const userData = JOSN.parse(userStr);
+        const userData = JSON.parse(userStr);
         setUser(userData);
         setIsAuthenticated(true);
       }
@@ -45,7 +44,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const login = (userData, login) => {
+  const login = (userData, token) => {
     localStorage.setItem("token", token);
     localStorage.setItem("user", JSON.stringify(userData));
 
@@ -61,16 +60,14 @@ export const AuthProvider = ({ children }) => {
 
     setUser(null);
     setIsAuthenticated(false);
-    navigate("/");
-
-    const updateUser = (updatedUserData) => {
-      const newUserData = { ...user, ...updatedUserData };
-      localStorage.setItem("user", JSON.stringify(newUserData));
-      setUser(newUserData);
-    };
+    Navigate("/");
   };
 
-  const updateUser = (updatedUserData) => {};
+  const updateUser = (updatedUserData) => {
+    const newUserData = { ...user, ...updatedUserData };
+    localStorage.setItem("user", JSON.stringify(newUserData));
+    setUser(newUserData);
+  };
 
   const value = {
     user,
