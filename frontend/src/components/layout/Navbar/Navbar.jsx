@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../../context/AuthContext";
-import ProfileDropdown from "../ProfileDropdown";
+import ProfileDropdown from "../ProfileDropdown/index";
 import { Menu, X, BookOpen, LogOut } from "lucide-react";
 
 const Navbar = () => {
@@ -53,7 +53,7 @@ const Navbar = () => {
 
           {/* Auth buttons & Profile */}
           <div className="hidden lg:flex items-center space-x-3">
-            {!isAuthenticated ? (
+            {isAuthenticated ? (
               <ProfileDropdown
                 isOpen={profileDropdownOpen}
                 onToggle={(e) => {
