@@ -1,8 +1,8 @@
-import React from "react";
-import { useState } from "react";
-import { Link, userNavigate } from "react-router";
+import React, { useState } from "react";
+import { Link } from "react-router";
+import { useNavigate } from "react-router";
 import { Mail, Lock, BookOpen } from "lucide-react";
-import toast from "react-toastify";
+import { toast } from "react-toastify";
 
 import InputField from "../../components/shared/InputField";
 import Button from "../../components/shared/Button";
@@ -11,7 +11,113 @@ import axiosInstance from "../../utils/axiosInstance";
 import { API_PATHS } from "../../utils/apiPaths";
 
 const Login = () => {
-  return <div>login</div>;
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      // const response = await axiosInstance.post(API_PATHS.AUTH.LOGIN, formData);
+      // login(response.data.user, response.data.token);
+      // toast.success("Welcome back!");
+      // navigate("/dashboard");
+    } catch (error) {
+      localStorage.clear();
+      toast.error(
+        error.response?.data?.message || "Login failed. Please try again",
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-violet-50 via-white to-purple-50 p-6 relative overflow-hidden">
+      <div className="absolute top-0 left-0 w-96 h-96 bg-violet-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30"></div>
+      <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30"></div>
+
+      <div className="w-full max-w-md relative z-10">
+        <div className="bg-white rounded-3xl shadow-xl shadow-violet-500/10 border border-gray-100 p-8 sm:p-10">
+          <div className="text-center mb-10">
+            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-linear-to-br from-violet-400 to-purple-500 shadow-lg shadow-violet-500/30 mb-6 group transition-transform duration-300 hover:scale-105">
+              <BookOpen className="w-7 h-7 text-white " />
+            </div>
+            <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight mb-2">
+              Welcome Back
+            </h1>
+            <p className="text-gray-500 text-lg font-medium">
+              Sign in to continue to your ebook dashboard.
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <InputField
+              label="Email"
+              name="email"
+              type="email"
+              placeholder="example@gmail.com"
+              icon={Mail}
+              value={formData.email}
+              onChange={handleChange}
+              required
+            />
+
+            <InputField
+              label="Password"
+              name="password"
+              type="password"
+              placeholder="••••••••"
+              icon={Lock}
+              value={formData.password}
+              onChange={handleChange}
+              required
+              className="w-full"
+            />
+
+            <div className="flex justify-end">
+              <a
+                href="#"
+                className="text-sm font-semibold text-violet-600 hover:text-violet-700 transition-colors"
+              >
+                Forgot password?
+              </a>
+            </div>
+
+            <Button
+              type="submit"
+              isLoading={isLoading}
+              className="w-full py-3.5 text-base font-semibold text-white bg-linear-to-r from-violet-500 to-purple-600 rounded-xl shadow-md hover:from-violet-600 hover:to-purple-700 transition-all duration-200"
+            >
+              {isLoading ? "Signing in..." : "Sign In"}
+            </Button>
+          </form>
+
+          <div className="mt-8 text-center border-t border-gray-100 pt-6">
+            <p className="text-gray-600 font-medium text-sm">
+              Don't have an account?{" "}
+              <Link
+                to="/signup"
+                className="text-violet-600 font-bold hover:text-violet-800 transition-colors"
+              >
+                Sign up
+              </Link>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default Login;

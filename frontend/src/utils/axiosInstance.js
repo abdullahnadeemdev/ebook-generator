@@ -26,7 +26,7 @@ axiosInstance.interceptors.request.use(
 );
 
 // Response intercepters
-axiosInstance.interceptors.response.user(
+axiosInstance.interceptors.response.use(
   (response) => {
     return response;
   },
