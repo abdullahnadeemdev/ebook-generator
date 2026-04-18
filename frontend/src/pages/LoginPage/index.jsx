@@ -28,10 +28,21 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      // const response = await axiosInstance.post(API_PATHS.AUTH.LOGIN, formData);
-      // login(response.data.user, response.data.token);
-      // toast.success("Welcome back!");
-      // navigate("/dashboard");
+      const response = await axiosInstance.post(API_PATHS.AUTH.LOGIN, formData);
+      const { token } = response.data;
+
+      // fetch profile to get details
+      const profileResponse = await axiosInstance.get(
+        API_PATHS.AUTH.GET_PROFILE,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+
+      login(profileResponse.data, token);
+
+      toast.success("Login successful");
+      navigate("/dashboard");
     } catch (error) {
       localStorage.clear();
       toast.error(
