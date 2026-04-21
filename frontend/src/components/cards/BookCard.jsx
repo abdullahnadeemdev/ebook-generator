@@ -12,7 +12,7 @@ const BookCard = ({ book, onDelete }) => {
 
   return (
     <div
-      className="group bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer overflow-hidden"
+      className="group relative bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer overflow-hidden"
       onClick={() => navigate(`/view-book/${book._id}`)}
     >
       <div className="relative aspect-3/4 overflow-hidden bg-slate-100">
@@ -33,14 +33,14 @@ const BookCard = ({ book, onDelete }) => {
           </div>
         )}
 
-        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 backdrop-blur-[2px] transition-opacity duration-300 flex items-center justify-center gap-3">
+        {/* 2. Enhanced Overlay Fix */}
+        <div className="absolute inset-0 z-30 bg-black/40 backdrop-blur-sm flex items-center justify-center gap-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300">
           <button
             onClick={(e) => {
               e.stopPropagation();
               navigate(`/editor/${book._id}`);
             }}
-            className="p-3 bg-white text-violet-600 rounded-full shadow-lg hover:bg-violet-600 hover:text-white transition-all transform translate-y-4 group-hover:translate-y-0 duration-300"
-            title="Edit eBook"
+            className="p-3 bg-white text-violet-600 rounded-full shadow-xl hover:bg-violet-600 hover:text-white transition-all transform translate-y-4 group-hover:translate-y-0 duration-300"
           >
             <Edit size={20} />
           </button>
@@ -50,15 +50,14 @@ const BookCard = ({ book, onDelete }) => {
               e.stopPropagation();
               onDelete(book._id);
             }}
-            className="p-3 bg-white text-red-600 rounded-full shadow-lg hover:bg-red-600 hover:text-white transition-all transform translate-y-4 group-hover:translate-y-0 duration-300 delay-75"
-            title="Delete eBook"
+            className="p-3 bg-white text-red-600 rounded-full shadow-xl hover:bg-red-600 hover:text-white transition-all transform translate-y-4 group-hover:translate-y-0 duration-300 delay-75"
           >
             <Trash2 size={20} />
           </button>
         </div>
 
         {book.status && (
-          <div className="absolute top-3 left-3 px-2.5 py-1 bg-white/90 backdrop-blur shadow-sm rounded-lg text-[10px] font-bold uppercase tracking-wider text-slate-700">
+          <div className="absolute top-3 left-3 z-20 px-2.5 py-1 bg-white/90 backdrop-blur shadow-sm rounded-lg text-[10px] font-bold uppercase tracking-wider text-slate-700">
             {book.status}
           </div>
         )}

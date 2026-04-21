@@ -29,6 +29,40 @@ const BookCardSkeleton = () => {
   );
 };
 
+const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message }) => {
+  if (!isOpen) return;
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto text-sm">
+      <div className="flex items-center justify-center min-h-screen px-4 text-center">
+        <div
+          className="fixed inset-0 bg-black/50 bg-opacity-25 transition-opacity"
+          onClick={onClose}
+        ></div>
+
+        <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 relative">
+          <h3 className="text-lg font-semibold text-slate-900 mb-4">{title}</h3>
+
+          <p className="text-slate-600 mb-6">{message}</p>
+
+          <div className="flex justify-end space-x-3">
+            <Button variant="secondary" onClick={onClose}>
+              Cancel
+            </Button>
+
+            <Button
+              onClick={onConfirm}
+              className="bg-red-600 text-white hover:bg-red-700"
+            >
+              Confirm
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const Dashboard = () => {
   const [books, setBooks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -114,21 +148,6 @@ const Dashboard = () => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {books.map((book) => (
-              // <div
-              //   key={book._id} n
-              //   className="group bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all p-5 cursor-pointer"
-              // >
-              //   <div className="aspect-3/4 bg-slate-50 rounded-xl mb-4 flex items-center justify-center text-slate-300 group-hover:bg-violet-50 group-hover:text-violet-200 transition-colors">
-              //     <FileText size={48} />
-              //   </div>
-              //   <h4 className="font-bold text-slate-900 truncate">
-              //     {book.title || "Untitled Book"}
-              //   </h4>
-              //   <p className="text-xs text-slate-500 mt-1 capitalize">
-              //     {book.status || "Draft"}
-              //   </p>
-              // </div>
-
               <BookCard
                 book={book}
                 key={book._id}
@@ -138,6 +157,15 @@ const Dashboard = () => {
           </div>
         )}
       </div>
+
+      <ConfirmationModal
+        isOpen={!!bookToDelelte}
+        onClose={() => setBookToDelete(null)}
+        title={"Delete eBook"}
+        message={
+          "Are you sure you want to delete this ebook ?. Once deleted it cannot be recovered"
+        }
+      />
     </DashboardLayout>
   );
 };
