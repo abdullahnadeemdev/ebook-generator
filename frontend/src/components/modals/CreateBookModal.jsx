@@ -66,7 +66,7 @@ const CreateBookModal = ({ isOpen, onClose, onBookCreated }) => {
         error?.response?.data?.message,
       );
     } finally {
-      setIsGeneratingOutline(fasle);
+      setIsGeneratingOutline(false);
     }
   };
 
