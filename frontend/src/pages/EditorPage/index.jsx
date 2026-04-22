@@ -97,17 +97,140 @@ const index = () => {
     });
   };
 
-  const handleReorderChapter = () => {};
+  const handleReorderChapter = (oldIndex, newIndex) => {
+    setBook((prev) => ({
+      ...prev,
+      chapters: arrayMove(prev.chapters, oldIndex, newIndex),
+    }));
+    setSelectedChapterIndex(newIndex);
+  };
 
-  const handleSaveChanges = async (bookToSave = book, showToast = true) => {};
+  const handleSaveChanges = async (bookToSave = book, showToast = true) => {
+    setIsSaving(true);
+    try {
+      const response = await axiosInstance.put(
+        `${API_PATHS.BOOKS.UPDATE_BOOK}/${bookId}`,
+        bookToSave,
+      );
+      if (showToast) {
+        toast.success("Changes saved successsfully");
+      }
+    } catch (error) {
+      console.error("ERROR OCCURED", error);
+      toast.error("Failed to save changes", error?.response?.data?.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
-  const handleCoverImageUpload = async (e) => {};
+  const handleCoverImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
 
-  const handleGenerateChapterContent = async (index) => {};
+    const formData = new FormData();
+    formData.append("coverImage", file);
+    setIsUploading(true);
 
-  const handleExportDoc = () => {};
+    try {
+      const response = await axiosInstance.put(
+        `${API_PATHS.BOOKS.UPDATE_COVER}/${bookId}`,
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } },
+      );
+      setBook(response.data);
+      toast.success("COver image uploaded ");
+    } catch (error) {
+      toast.error("Failed to upload cover image");
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
-  const handleExportPDF = () => {};
+  const handleGenerateChapterContent = async (index) => {
+    const chapter = book.chapters[index];
+    if (!chapter || !chapter.title) {
+      toast.error("CHpater title is required to generate a chapter");
+      return;
+    }
+
+    setIsGenerating(true);
+
+    try {
+      const response = await axiosInstance.post(
+        API_PATHS.AI.GENERATE_CHAPTER_CONTENT,
+        {
+          chapterTitle: chapter.title,
+          chapterDescription: chapter.description || "",
+          style: aiStyle,
+        },
+      );
+
+      const updatedChapters = [...book.chapters];
+      updatedChapters[index].content = response.data.content;
+
+      const updatedBook = { ...book, chapters: updatedChapters };
+      setBook(updatedBook);
+      toast.success("Content for chapter generated");
+
+      await handleSaveChanges(updatedBook, false);
+    } catch (error) {
+      toast.error(
+        "Error generating chapter content",
+        error?.response?.data?.message,
+      );
+      console.log(error?.response?.data);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleExportDoc = async () => {
+    toast.loading("Generating document...");
+    try {
+      const response = await axiosInstance.get(
+        `${API_PATHS.EXPORT.DOC}/${bookId}/doc`,
+        { responseType: "blob" },
+      );
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("downlaod", `${book.title}.docx`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.dismiss();
+      toast.success("Document export started");
+    } catch (error) {
+      toast.dismiss();
+      toast.error("Failed to export document ");
+    }
+  };
+
+  const handleExportPDF = async () => {
+    toast.loading("Generating PDF...");
+    try {
+      const response = await axiosInstance.get(
+        `${API_PATHS.EXPORT.PDF}/${bookId}/pdf`,
+        { responseType: "blob" },
+      );
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("downlaod", `${book.title}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.dismiss();
+      toast.success("PDF export started");
+    } catch (error) {
+      toast.dismiss();
+      toast.error("Failed to export pdf ");
+    }
+  };
 
   if (isLoading || !book) {
     return (
@@ -121,9 +244,7 @@ const index = () => {
     <>
       {/* 1. Main Flex Wrapper for Sidebar + Content */}
       <div className="flex h-screen w-full overflow-hidden bg-slate-50">
-        {/* ========================================== */}
         {/* MOBILE SIDEBAR */}
-        {/* ========================================== */}
         {isSidebarOpen && (
           <div
             className="fixed inset-0 z- flex lg:hidden" // ✅ Fixed missing z-
