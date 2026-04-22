@@ -1,6 +1,6 @@
 import React, { Children, useEffect, useRef, useState } from "react";
 
-const Dropdown = ({ children }) => {
+const Dropdown = ({ children, trigger }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
