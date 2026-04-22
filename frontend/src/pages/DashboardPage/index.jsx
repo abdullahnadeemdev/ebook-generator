@@ -9,6 +9,7 @@ import { useAuth } from "../../context/AuthContext";
 import axiosInstance from "../../utils/axiosInstance";
 import { API_PATHS } from "../../utils/apiPaths";
 import BookCard from "../../components/cards/BookCard";
+import CreateBookModal from "../../components/modals/CreateBookModal";
 
 const BookCardSkeleton = () => {
   return (
@@ -67,7 +68,7 @@ const Dashboard = () => {
   const [books, setBooks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [bookToDelelte, setBookToDelete] = useState(null);
+  const [bookToDelete, setBookToDelete] = useState(null);
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -86,7 +87,19 @@ const Dashboard = () => {
   }, []);
 
   const handleDeleteBook = async () => {
-    if (!bookToDelelte) return;
+    if (!bookToDelete) return;
+    try {
+      await axiosInstance.delete(
+        `${API_PATHS.BOOKS.DELETE_BOOK}/${bookToDelete}`,
+      );
+
+      setBooks(books.filter((book) => book._id !== bookToDelete));
+      toast.success("ebook deleted successfully");
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Failed to delete book");
+    } finally {
+      setBookToDelete(null);
+    }
   };
 
   const handleCreateBookClick = () => {
@@ -159,12 +172,19 @@ const Dashboard = () => {
       </div>
 
       <ConfirmationModal
-        isOpen={!!bookToDelelte}
+        isOpen={!!bookToDelete}
+        onConfirm={handleDeleteBook}
         onClose={() => setBookToDelete(null)}
         title={"Delete eBook"}
         message={
           "Are you sure you want to delete this ebook ?. Once deleted it cannot be recovered"
         }
+      />
+
+      <CreateBookModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onBookCreated={handleBookCreated}
       />
     </DashboardLayout>
   );
