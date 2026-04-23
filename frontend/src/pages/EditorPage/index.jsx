@@ -138,7 +138,7 @@ const index = () => {
         { headers: { "Content-Type": "multipart/form-data" } },
       );
       setBook(response.data);
-      toast.success("COver image uploaded ");
+      toast.success("Cover image uploaded ");
     } catch (error) {
       toast.error("Failed to upload cover image");
     } finally {
