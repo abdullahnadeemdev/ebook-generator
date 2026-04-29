@@ -20,7 +20,9 @@ const Signup = () => {
   const navigate = useNavigate();
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+
+    setFormData({ ...formData, [name]: value });
   };
 
   const handleSubmit = async (e) => {
@@ -34,7 +36,7 @@ const Signup = () => {
         password: formData.password,
       };
 
-      // 2. Call your registration endpoint
+      // 2. Calling registration endpoint
       const response = await axiosInstance.post(
         API_PATHS.AUTH.REGISTER,
         payload,

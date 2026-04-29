@@ -23,7 +23,7 @@ async function callWithRetry(fn, retries = 5) {
 
 async function generateOutlineAI(prompt) {
   const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
+    model: "gemini-2.5-flash-lite",
     contents: [{ role: "user", parts: [{ text: prompt }] }],
   });
 
@@ -70,10 +70,13 @@ Example structure:
   }
 ]`;
     const text = await callWithRetry(() => generateOutlineAI(prompt));
+    console.log("text", text);
 
     //finding to extract the JSON  array from the response
     const startIndex = text.indexOf("[");
     const endIndex = text.lastIndexOf("]");
+    console.log("startIndex", startIndex);
+    console.log("endIndex", endIndex);
 
     if (startIndex === -1 || endIndex === -1) {
       console.error("could not find JSON aray in AI response", text);
@@ -81,6 +84,7 @@ Example structure:
     }
 
     const jsonString = text.substring(startIndex, endIndex + 1);
+    console.log("jsonString", jsonString);
     //validating the response to be a valid json
     try {
       const outline = JSON.parse(jsonString);

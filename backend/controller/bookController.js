@@ -32,7 +32,6 @@ const createBook = async (req, res) => {
 // @route Get /api/books
 //@ access Private
 const getBooks = async (req, res) => {
-  console.log(req, req.user._id);
   try {
     const books = await Book.find({ userId: req.user._id }).sort({
       createdAt: -1,

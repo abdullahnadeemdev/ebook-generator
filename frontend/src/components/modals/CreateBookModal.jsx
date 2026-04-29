@@ -309,7 +309,7 @@ const CreateBookModal = ({ isOpen, onClose, onBookCreated }) => {
                         {/* Delete Button */}
                         <button
                           onClick={() => handleDeleteChapter(index)}
-                          className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                          className="p-1.5 cursor-pointer text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
                           title="Delete Chapter"
                         >
                           <Trash2 size={18} />

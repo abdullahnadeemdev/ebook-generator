@@ -61,6 +61,8 @@ const index = () => {
     fetchBook();
   }, [bookId, navigate]);
 
+  console.log("book", book);
+
   const handleBookChange = (e) => {
     const { name, value } = e.target;
     setBook((prev) => ({ ...prev, [name]: value }));
@@ -242,7 +244,6 @@ const index = () => {
 
   return (
     <>
-      {/* 1. Main Flex Wrapper for Sidebar + Content */}
       <div className="flex h-screen w-full overflow-hidden bg-slate-50">
         {/* MOBILE SIDEBAR */}
         {isSidebarOpen && (
@@ -292,10 +293,8 @@ const index = () => {
         {/* ========================================== */}
         {/* DESKTOP SIDEBAR */}
         {/* ========================================== */}
-        {/* ✅ Now respects isSidebarOpen state */}
         {isSidebarOpen && (
           <div className="hidden lg:block shrink-0 relative transition-all duration-300">
-            {/* ✅ Added a floating close button for the desktop sidebar */}
             <button
               onClick={() => setIsSidebarOpen(false)}
               className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-md transition-colors z-50"
@@ -324,7 +323,6 @@ const index = () => {
           {/* Header */}
           <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 lg:px-8 shrink-0 z-30">
             <div className="flex items-center gap-4">
-              {/* ✅ Menu Icon: ONLY shows when sidebar is closed */}
               {!isSidebarOpen && (
                 <button
                   onClick={() => setIsSidebarOpen(true)}
@@ -334,7 +332,7 @@ const index = () => {
                 </button>
               )}
 
-              {/* Segmented Control Tabs */}
+              {/*  Control Tabs */}
               <div className="flex items-center bg-slate-100 p-1 rounded-xl w-fit">
                 <button
                   onClick={() => setActiveTab("editor")}
@@ -399,8 +397,7 @@ const index = () => {
             </div>
           </header>
 
-          {/* 4. The Actual Editor Viewport */}
-          {/* ✅ Fixed missing 'flex-1 overflow-y-auto' so the page can actually scroll! */}
+          {/*  Editor Viewport */}
           <div className="flex-1 overflow-y-auto p-4 md:p-8 lg:p-12 custom-scrollbar">
             <div className="max-w-5xl mx-auto">
               {activeTab === "editor" ? (
