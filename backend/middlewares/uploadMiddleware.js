@@ -31,7 +31,7 @@ function checkFileType(file, cb) {
   if (mimetype && extname) {
     return cb(null, true);
   } else {
-    cb("Error:images only");
+    cb(new Error("Only image files (jpeg, jpg, png, gif) are allowed"));
   }
 }
 

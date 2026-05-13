@@ -2,14 +2,8 @@ import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 
 const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.SECRETKEY, {
-    expiresIn: "7d",
-  });
+  return jwt.sign({ id }, process.env.SECRETKEY, { expiresIn: "7d" });
 };
-
-// @desc Register new user
-// @route POST/api/auth/register
-// @acccesss Public
 
 const registerUser = async (req, res) => {
   const { name, email, password } = req.body;
@@ -19,13 +13,22 @@ const registerUser = async (req, res) => {
       return res.status(400).json({ msg: "Please fill in all the fields" });
     }
 
-    const userExists = await User.findOne({ email });
+    if (password.length < 6) {
+      return res.status(400).json({ msg: "Password must be at least 6 characters" });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ msg: "Please provide a valid email address" });
+    }
+
+    const userExists = await User.findOne({ email: email.toLowerCase() });
 
     if (userExists) {
       return res.status(400).json({ msg: "User already exists" });
     }
 
-    const user = await User.create({ name, email, password });
+    const user = await User.create({ name, email: email.toLowerCase(), password });
 
     if (user) {
       return res.status(201).json({
@@ -36,40 +39,39 @@ const registerUser = async (req, res) => {
       res.status(400).json({ msg: "Invalid user data" });
     }
   } catch (error) {
-    res.status(500).json({ msg: "SERVER ERROR", err: error.message });
+    res.status(500).json({ msg: "Server error" });
   }
 };
-
-// @desc Login User
-// @route POST/api/auth/login
-// @acccesss Public
 
 const loginUser = async (req, res) => {
   const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ msg: "Please provide email and password" });
+  }
+
   try {
-    const user = await User.findOne({ email }).select("+password");
+    const user = await User.findOne({ email: email.toLowerCase() }).select("+password");
 
     if (user && (await user.matchPassword(password))) {
       res.json({
-        msg: "Login Sucesssful",
+        msg: "Login successful",
         _id: user._id,
         name: user.name,
+        email: user.email,
         token: generateToken(user._id),
       });
     } else {
-      return res.status(400).json({ msg: "Invalid credentials" });
+      return res.status(401).json({ msg: "Invalid credentials" });
     }
   } catch (error) {
-    res.status(500).json({ msg: "SERVER ERROR", err: error.message });
+    res.status(500).json({ msg: "Server error" });
   }
 };
 
-// @desc Get current logged in user
-// @route Get/api/auth/profile
-// @acccesss Private
 const getProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user._id);
 
     if (user) {
       res.json({
@@ -80,36 +82,33 @@ const getProfile = async (req, res) => {
         isPro: user.isPro,
       });
     } else {
-      res.status(400).json({ msg: "user not found" });
+      res.status(404).json({ msg: "User not found" });
     }
   } catch (error) {
-    res.status(500).json({ msg: "SERVER ERROR" });
+    res.status(500).json({ msg: "Server error" });
   }
 };
-
-// @desc Update user profile
-// @route Put/api/auth/me
-// @acccesss Private
 
 const updateUserProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
-    if (user) {
-      user.name = req.body.name || user.name;
 
-      const updatedUser = await user.save();
-
-      res.json({
-        msg: "updation success",
-        _id: updatedUser._id,
-        name: updatedUser.name,
-      });
-    } else {
-      return res.status(404).json({ msg: "updation failed" });
+    if (!user) {
+      return res.status(404).json({ msg: "User not found" });
     }
+
+    if (req.body.name) user.name = req.body.name;
+
+    const updatedUser = await user.save();
+
+    res.json({
+      msg: "Profile updated successfully",
+      _id: updatedUser._id,
+      name: updatedUser.name,
+      email: updatedUser.email,
+    });
   } catch (error) {
-    console.log(error);
-    res.status(500).json({ msg: "SERVER ERROR" });
+    res.status(500).json({ msg: "Server error" });
   }
 };
 

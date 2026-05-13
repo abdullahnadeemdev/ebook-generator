@@ -10,33 +10,30 @@ const axiosInstance = axios.create({
   },
 });
 
-//REquest Interceptor
 axiosInstance.interceptors.request.use(
   (config) => {
     const accessToken = localStorage.getItem("token");
-
     if (accessToken) {
       config.headers.Authorization = `Bearer ${accessToken}`;
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  },
+  (error) => Promise.reject(error),
 );
 
-// Response intercepters
 axiosInstance.interceptors.response.use(
-  (response) => {
-    return response;
-  },
+  (response) => response,
   (error) => {
     if (error.response) {
-      if ((error.response.status = 500)) {
-        console.error("Server error.Please try again later");
+      if (error.response.status === 500) {
+        console.error("Server error. Please try again later.");
+      } else if (error.response.status === 401) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        window.location.href = "/login";
       }
     } else if (error.code === "ECONNABORTED") {
-      console.error("Request timeout. Please try again later");
+      console.error("Request timeout. Please try again later.");
     }
     return Promise.reject(error);
   },

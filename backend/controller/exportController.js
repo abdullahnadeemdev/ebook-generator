@@ -5,7 +5,6 @@ import {
   TextRun,
   HeadingLevel,
   AlignmentType,
-  UnderlineType,
   ImageRun,
 } from "docx";
 
@@ -15,10 +14,8 @@ import MarkdownIt from "markdown-it";
 import Book from "../models/Book.js";
 import fs from "fs";
 
-const doc = new PDFDocument();
 const md = new MarkdownIt();
 
-//Typography configuration matching the PDF export
 const DOCX_STYLES = {
   fonts: {
     body: "Chapters",
@@ -44,13 +41,55 @@ const DOCX_STYLES = {
   },
 };
 
-//Processas markdowncontetn into docx paragraphs
+const processInlineContent = (children) => {
+  const textRuns = [];
+  let isBold = false;
+  let isItalic = false;
+  let textBuffer = "";
+
+  const flushText = () => {
+    if (textBuffer.trim()) {
+      textRuns.push(
+        new TextRun({
+          text: textBuffer,
+          bold: isBold,
+          italics: isItalic,
+          font: DOCX_STYLES.fonts.body,
+          size: DOCX_STYLES.sizes.body * 2,
+        }),
+      );
+      textBuffer = "";
+    }
+  };
+
+  children.forEach((child) => {
+    if (child.type === "strong_open") {
+      flushText();
+      isBold = true;
+    } else if (child.type === "strong_close") {
+      flushText();
+      isBold = false;
+    } else if (child.type === "em_open") {
+      flushText();
+      isItalic = true;
+    } else if (child.type === "em_close") {
+      flushText();
+      isItalic = false;
+    } else if (child.type === "text") {
+      textBuffer += child.content;
+    }
+  });
+
+  flushText();
+  return textRuns;
+};
+
 const processMarkdownToDocx = (markdown) => {
   const tokens = md.parse(markdown, {});
   const paragraphs = [];
   let inList = false;
   let listType = null;
-  let orderedCouner = 1;
+  let orderedCounter = 1;
 
   for (let i = 0; i < tokens.length; i++) {
     const token = tokens[i];
@@ -66,19 +105,15 @@ const processMarkdownToDocx = (markdown) => {
 
           switch (level) {
             case 1:
-              headingLevel = HeadingLevel.Heading_1;
-              fontSize = DOCX_STYLES.sizes.h2;
+              headingLevel = HeadingLevel.HEADING_1;
+              fontSize = DOCX_STYLES.sizes.h1;
               break;
             case 2:
-              headingLevel = HeadingLevel.Heading_2;
+              headingLevel = HeadingLevel.HEADING_2;
               fontSize = DOCX_STYLES.sizes.h2;
               break;
-            case 3:
-              headingLevel = HeadingLevel.Heading_3;
-              fontSize = DOCX_STYLES.sizes.h3;
-              break;
             default:
-              headingLevel = HeadingLevel.Heading_3;
+              headingLevel = HeadingLevel.HEADING_3;
               fontSize = DOCX_STYLES.sizes.h3;
           }
 
@@ -90,13 +125,8 @@ const processMarkdownToDocx = (markdown) => {
                 before: DOCX_STYLES.spacing.headingBefore,
                 after: DOCX_STYLES.spacing.headingAfter,
               },
-              style: {
-                font: DOCX_STYLES.fonts.heading,
-                size: fontSize * 2, //docx uses half points
-              },
             }),
           );
-
           i += 2;
         }
       } else if (token.type === "paragraph_open") {
@@ -111,7 +141,7 @@ const processMarkdownToDocx = (markdown) => {
                 children: textRuns,
                 spacing: {
                   before: inList ? 100 : DOCX_STYLES.spacing.paragraphBefore,
-                  before: inList ? 100 : DOCX_STYLES.spacing.paragraphAfter,
+                  after: inList ? 100 : DOCX_STYLES.spacing.paragraphAfter,
                   line: 360,
                 },
                 alignment: AlignmentType.JUSTIFIED,
@@ -126,7 +156,6 @@ const processMarkdownToDocx = (markdown) => {
       } else if (token.type === "bullet_list_close") {
         inList = false;
         listType = null;
-        //add spacing after list
         paragraphs.push(new Paragraph({ text: "", spacing: { after: 100 } }));
       } else if (token.type === "ordered_list_open") {
         inList = true;
@@ -138,7 +167,7 @@ const processMarkdownToDocx = (markdown) => {
         orderedCounter = 1;
         paragraphs.push(new Paragraph({ text: "", spacing: { after: 100 } }));
       } else if (token.type === "list_item_open") {
-        const nextToken = token[i + 1];
+        const nextToken = tokens[i + 1];
 
         if (nextToken && nextToken.type === "paragraph_open") {
           const inlineToken = tokens[i + 2];
@@ -149,26 +178,18 @@ const processMarkdownToDocx = (markdown) => {
             inlineToken.children
           ) {
             const textRuns = processInlineContent(inlineToken.children);
-
-            let bulletText = "";
-            if (listType === "bullet") {
-              bulletText = ". ";
-            } else if (listType === "ordered") {
-              bulletText = `${orderedCounter}.`;
-              orderedCounter++;
-            }
+            const bulletText =
+              listType === "ordered" ? `${orderedCounter}. ` : "• ";
+            if (listType === "ordered") orderedCounter++;
 
             paragraphs.push(
               new Paragraph({
                 children: [
-                  new TextRun({
-                    text: bulletText,
-                    font: DOCX_STYLES.fonts.body,
-                  }),
+                  new TextRun({ text: bulletText, font: DOCX_STYLES.fonts.body }),
                   ...textRuns,
                 ],
                 spacing: { before: 50, after: 50 },
-                indent: { left: 720 }, //0.5 inch indent
+                indent: { left: 720 },
               }),
             );
             i += 4;
@@ -177,7 +198,7 @@ const processMarkdownToDocx = (markdown) => {
       } else if (token.type === "blockquote_open") {
         const nextToken = tokens[i + 1];
 
-        if (nextToken && nextToken.type === "paragaph_open") {
+        if (nextToken && nextToken.type === "paragraph_open") {
           const inlineToken = tokens[i + 2];
           if (inlineToken && inlineToken.type === "inline") {
             paragraphs.push(
@@ -194,12 +215,7 @@ const processMarkdownToDocx = (markdown) => {
                 indent: { left: 720 },
                 alignment: AlignmentType.JUSTIFIED,
                 border: {
-                  left: {
-                    color: "4F46E5",
-                    space: 1,
-                    style: "single",
-                    size: 24,
-                  },
+                  left: { color: "4F46E5", space: 1, style: "single", size: 24 },
                 },
               }),
             );
@@ -218,9 +234,7 @@ const processMarkdownToDocx = (markdown) => {
               }),
             ],
             spacing: { before: 200, after: 200 },
-            shading: {
-              fill: "F5F5F5",
-            },
+            shading: { fill: "F5F5F5" },
           }),
         );
       } else if (token.type === "hr") {
@@ -228,19 +242,14 @@ const processMarkdownToDocx = (markdown) => {
           new Paragraph({
             text: "",
             border: {
-              bottom: {
-                color: "CCCCCC",
-                space: 1,
-                style: "single",
-                size: 6,
-              },
+              bottom: { color: "CCCCCC", space: 1, style: "single", size: 6 },
             },
             spacing: { before: 200, after: 200 },
           }),
         );
       }
     } catch (error) {
-      console.error("Error processing troken: ", token.type, error);
+      console.error("Error processing token:", token.type, error);
       continue;
     }
   }
@@ -248,118 +257,57 @@ const processMarkdownToDocx = (markdown) => {
   return paragraphs;
 };
 
-//PRocess inline content (bold,italic,text )
-
-const processInlineContent = (children) => {
-  const textRuns = [];
-  let currentFormatting = { bold: false, italic: false };
-  let textbuffer = "";
-
-  const flushText = () => {
-    if (textbuffer.trim()) {
-      textRuns.push(
-        new textRuns({
-          text: textbuffer,
-          bold: currentFormatting.bold,
-          italics: currentFormatting,
-          italic,
-          font: DOCX_STYLES.fonts.body,
-          size: DOCX_STYLES.sizes.body * 2,
-        }),
-      );
-      textbuffer = "";
-    }
-  };
-
-  children.forEach((child) => {
-    if (child.type === "strong_open") {
-      flushText();
-      currentFormatting.bold = true;
-    } else if (child.type === "strong_close") {
-      flushText();
-      currentFormatting.bold = false;
-    } else if (child.type === "em_open") {
-      flushText();
-      currentFormatting = true;
-    } else if (child.type === "em_close") {
-      flushText();
-      currentFormatting = false;
-    } else if (child.type === "text") {
-      textBuffer += child.content;
-    }
-  });
-
-  flushText();
-  return textRuns;
-};
-
 const exportAsDocument = async (req, res) => {
   try {
     const book = await Book.findById(req.params.id);
 
     if (!book) {
-      return res.status(400).json({ msg: "Book not found" });
+      return res.status(404).json({ msg: "Book not found" });
     }
 
     if (book.userId.toString() !== req.user._id.toString()) {
-      return res.status(401).json({ msg: "Book not authorized" });
+      return res.status(403).json({ msg: "Not authorized" });
     }
 
     const sections = [];
     const coverPage = [];
 
     if (book.coverImage && !book.coverImage.includes("pravatar")) {
-      const imagePath = book.coverImage.substring(1);
+      const imagePath = book.coverImage.startsWith("/")
+        ? book.coverImage.substring(1)
+        : book.coverImage;
 
       try {
         if (fs.existsSync(imagePath)) {
           const imageBuffer = fs.readFileSync(imagePath);
 
-          //add some top spacing
           coverPage.push(
-            new Paragraph({
-              text: "",
-              spacing: { before: 1000 },
-            }),
+            new Paragraph({ text: "", spacing: { before: 1000 } }),
           );
-
-          //add image centered on page
           coverPage.push(
             new Paragraph({
               children: [
                 new ImageRun({
                   data: imageBuffer,
-                  transformation: {
-                    width: 400,
-                    height: 550,
-                  },
+                  transformation: { width: 400, height: 550 },
                 }),
               ],
               alignment: AlignmentType.CENTER,
               spacing: { before: 200, after: 400 },
             }),
           );
-
-          //page break after cover
           coverPage.push(
-            new Paragraph({
-              text: "",
-              pageBreakBefore: true,
-            }),
+            new Paragraph({ text: "", pageBreakBefore: true }),
           );
         }
       } catch (imgError) {
-        console.error(`could not embed image: ${imagePath}`, imgError);
+        console.error(`Could not embed image: ${imagePath}`, imgError);
       }
     }
 
     sections.push(...coverPage);
 
-    //Title Page section
-    const titlePage = [];
-
-    // main title
-    titlePage.push(
+    sections.push(
       new Paragraph({
         children: [
           new TextRun({
@@ -375,9 +323,8 @@ const exportAsDocument = async (req, res) => {
       }),
     );
 
-    //subtitle if exists
     if (book.subtitle && book.subtitle.trim()) {
-      titlePage.push(
+      sections.push(
         new Paragraph({
           children: [
             new TextRun({
@@ -393,8 +340,7 @@ const exportAsDocument = async (req, res) => {
       );
     }
 
-    //author
-    titlePage.push(
+    sections.push(
       new Paragraph({
         children: [
           new TextRun({
@@ -409,38 +355,23 @@ const exportAsDocument = async (req, res) => {
       }),
     );
 
-    //decorative line
-    titlePage.push(
+    sections.push(
       new Paragraph({
         text: "",
         border: {
-          bottom: {
-            color: "4F46E5",
-            space: 1,
-            style: "single",
-            size: 12,
-          },
+          bottom: { color: "4F46E5", space: 1, style: "single", size: 12 },
         },
         alignment: AlignmentType.CENTER,
         spacing: { before: 400 },
       }),
     );
 
-    // process chapters
     book.chapters.forEach((chapter, index) => {
       try {
-        //page break before each chapter (except first)
-
         if (index > 0) {
-          sections.push(
-            new Paragraph({
-              text: "",
-              pageBreakBefore: true,
-            }),
-          );
+          sections.push(new Paragraph({ text: "", pageBreakBefore: true }));
         }
 
-        //chapter title
         sections.push(
           new Paragraph({
             children: [
@@ -448,7 +379,7 @@ const exportAsDocument = async (req, res) => {
                 text: chapter.title,
                 bold: true,
                 font: DOCX_STYLES.fonts.heading,
-                size: DOCX_STYLES.sizes.chapterTitle,
+                size: DOCX_STYLES.sizes.chapterTitle * 2,
                 color: "1A202C",
               }),
             ],
@@ -459,8 +390,6 @@ const exportAsDocument = async (req, res) => {
           }),
         );
 
-        // chapter content
-
         const contentParagraphs = processMarkdownToDocx(chapter.content || "");
         sections.push(...contentParagraphs);
       } catch (chapterError) {
@@ -468,18 +397,12 @@ const exportAsDocument = async (req, res) => {
       }
     });
 
-    //create the document
     const doc = new Document({
       sections: [
         {
           properties: {
             page: {
-              margin: {
-                top: 1440,
-                right: 1440,
-                bottom: 1440,
-                left: 1440,
-              },
+              margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 },
             },
           },
           children: sections,
@@ -487,34 +410,27 @@ const exportAsDocument = async (req, res) => {
       ],
     });
 
-    //generate buffer
-
     const buffer = await Packer.toBuffer(doc);
+    const safeTitle = book.title.replace(/[^a-zA-Z0-9]/g, "_");
 
-    //send the document
     res.setHeader(
-      "COntent-Type",
+      "Content-Type",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     );
     res.setHeader(
-      "Content-Dispositon",
-      `attachment; filenmae="${book.title.replace(/^[a-zA-Z0-9]/g, "-")}.docx`,
+      "Content-Disposition",
+      `attachment; filename="${safeTitle}.docx"`,
     );
     res.setHeader("Content-Length", buffer.length);
-
     res.send(buffer);
   } catch (error) {
-    console.error("Error exporting doucment", error);
+    console.error("Error exporting document:", error);
     if (!res.headersSent) {
-      res.status(500).json({
-        msg: "Server error during document export",
-        error: error.message,
-      });
+      res.status(500).json({ msg: "Server error during document export" });
     }
   }
 };
 
-//Typography config for modern ebook styling
 const TYPOGRAPHY = {
   fonts: {
     serif: "Times-Roman",
@@ -522,9 +438,7 @@ const TYPOGRAPHY = {
     serifItalic: "Times-Italic",
     sans: "Helvetica",
     sansBold: "Helvetica-Bold",
-    sansOblique: "Helvetica-Oblique",
   },
-
   sizes: {
     title: 28,
     author: 16,
@@ -533,7 +447,6 @@ const TYPOGRAPHY = {
     h2: 16,
     h3: 14,
     body: 11,
-    caption: 9,
   },
   spacing: {
     paragraphSpacing: 12,
@@ -562,10 +475,7 @@ const renderInlineTokens = (doc, tokens, options = {}) => {
 
   const flushBuffer = () => {
     if (textBuffer) {
-      doc.font(currentFont).text(textBuffer, {
-        ...baseOptions,
-        continued: true,
-      });
+      doc.font(currentFont).text(textBuffer, { ...baseOptions, continued: true });
       textBuffer = "";
     }
   };
@@ -589,19 +499,13 @@ const renderInlineTokens = (doc, tokens, options = {}) => {
       currentFont = TYPOGRAPHY.fonts.serif;
     } else if (token.type === "code_inline") {
       flushBuffer();
-      doc.font("Courier").text(token.content, {
-        ...baseOptions,
-        continued: true,
-      });
+      doc.font("Courier").text(token.content, { ...baseOptions, continued: true });
       doc.font(currentFont);
     }
   }
 
   if (textBuffer) {
-    doc.font(currentFont).text(textBuffer, {
-      ...baseOptions,
-      continued: true,
-    });
+    doc.font(currentFont).text(textBuffer, { ...baseOptions, continued: true });
   } else {
     doc.text("", { continued: false });
   }
@@ -619,67 +523,39 @@ const renderMarkdown = (doc, markdown) => {
     const token = tokens[i];
 
     try {
-      if (token.type === "haeding_open") {
+      if (token.type === "heading_open") {
         const level = parseInt(token.tag.substring(1), 10);
 
         let fontSize;
-
         switch (level) {
-          case 1:
-            fontSize = TYPOGRAPHY.sizes.h1;
-            break;
-          case 2:
-            fontSize = TYPOGRAPHY.sizes.h2;
-            break;
-          case 3:
-            fontSize = TYPOGRAPHY.sizes.h3;
-            break;
-          default:
-            fontSize = TYPOGRAPHY.sizes.h3;
+          case 1: fontSize = TYPOGRAPHY.sizes.h1; break;
+          case 2: fontSize = TYPOGRAPHY.sizes.h2; break;
+          default: fontSize = TYPOGRAPHY.sizes.h3;
         }
 
-        doc.moveDown(
-          TYPOGRAPHY.spacing.headingSpacing.before / TYPOGRAPHY.sizes.body,
-        );
-
-        doc
-          .font(TYPOGRAPHY.fonts.sansBold)
-          .fontSize(fontSize)
-          .fillColor(TYPOGRAPHY.colors.heading);
+        doc.moveDown(TYPOGRAPHY.spacing.headingSpacing.before / TYPOGRAPHY.sizes.body);
+        doc.font(TYPOGRAPHY.fonts.sansBold).fontSize(fontSize).fillColor(TYPOGRAPHY.colors.heading);
 
         if (i + 1 < tokens.length && tokens[i + 1].type === "inline") {
-          renderInlineTokens(doc, tokens[i + 1].children, {
-            align: "left",
-            lineGap: 0,
-          });
+          renderInlineTokens(doc, tokens[i + 1].children, { align: "left", lineGap: 0 });
           i++;
         }
 
-        doc.moveDown(
-          TYPOGRAPHY.spacing.headingSpacing.after / TYPOGRAPHY.sizes.body,
-        );
+        doc.moveDown(TYPOGRAPHY.spacing.headingSpacing.after / TYPOGRAPHY.sizes.body);
 
-        if (i + 1 < token.length && tokens[i + 1].type === "heading_close") {
+        if (i + 1 < tokens.length && tokens[i + 1].type === "heading_close") {
           i++;
         }
       } else if (token.type === "paragraph_open") {
-        doc
-          .font(TYPOGRAPHY.fonts.serif)
-          .fontSize(TYPOGRAPHY.sizes.body)
-          .fillColor(TYPOGRAPHY.colors.text);
+        doc.font(TYPOGRAPHY.fonts.serif).fontSize(TYPOGRAPHY.sizes.body).fillColor(TYPOGRAPHY.colors.text);
 
         if (i + 1 < tokens.length && tokens[i + 1].type === "inline") {
-          renderInlineTokens(doc, tokens[i + 1].children, {
-            align: "justify",
-            lineGap: 2,
-          });
+          renderInlineTokens(doc, tokens[i + 1].children, { align: "justify", lineGap: 2 });
           i++;
         }
 
         if (!inList) {
-          doc.moveDown(
-            TYPOGRAPHY.spacing.paragraphSpacing / TYPOGRAPHY.sizes.body,
-          );
+          doc.moveDown(TYPOGRAPHY.spacing.paragraphSpacing / TYPOGRAPHY.sizes.body);
         }
         if (i + 1 < tokens.length && tokens[i + 1].type === "paragraph_close") {
           i++;
@@ -691,9 +567,7 @@ const renderMarkdown = (doc, markdown) => {
       } else if (token.type === "bullet_list_close") {
         inList = false;
         listType = null;
-        doc.moveDown(
-          TYPOGRAPHY.spacing.paragraphSpacing / TYPOGRAPHY.sizes.body,
-        );
+        doc.moveDown(TYPOGRAPHY.spacing.paragraphSpacing / TYPOGRAPHY.sizes.body);
       } else if (token.type === "ordered_list_open") {
         inList = true;
         listType = "ordered";
@@ -701,33 +575,20 @@ const renderMarkdown = (doc, markdown) => {
         doc.moveDown(TYPOGRAPHY.spacing.listSpacing / TYPOGRAPHY.sizes.body);
       } else if (token.type === "ordered_list_close") {
         inList = false;
-        listType = true;
+        listType = null;
         orderedListCounter = 1;
-        doc.moveDown(
-          TYPOGRAPHY.spacing.paragraphSpacing / TYPOGRAPHY.sizes.body,
-        );
+        doc.moveDown(TYPOGRAPHY.spacing.paragraphSpacing / TYPOGRAPHY.sizes.body);
       } else if (token.type === "list_item_open") {
-        let bullet = "";
-        if (listType === "bullet") {
-          bullet = ". ";
-        } else if (listType === "ordered") {
-          bullet = `${orderedListCounter}. `;
-          orderedListCounter;
-        }
+        const bullet =
+          listType === "ordered" ? `${orderedListCounter}. ` : "• ";
+        if (listType === "ordered") orderedListCounter++;
 
-        doc
-          .font(TYPOGRAPHY.fonts.serif)
-          .fontSize(TYPOGRAPHY.sizes.body)
-          .fillColor(TYPOGRAPHY.colors.text);
-
+        doc.font(TYPOGRAPHY.fonts.serif).fontSize(TYPOGRAPHY.sizes.body).fillColor(TYPOGRAPHY.colors.text);
         doc.text(bullet, { indent: 20, continued: true });
 
         for (let j = i + 1; j < tokens.length; j++) {
-          if (tokens[j].type === "inline" && token[j.children]) {
-            renderInlineTokens(doc.tokens[j].children, {
-              align: "left",
-              lineGap: 2,
-            });
+          if (tokens[j].type === "inline" && tokens[j].children) {
+            renderInlineTokens(doc, tokens[j].children, { align: "left", lineGap: 2 });
             break;
           } else if (tokens[j].type === "list_item_close") {
             break;
@@ -735,35 +596,23 @@ const renderMarkdown = (doc, markdown) => {
         }
         doc.moveDown(TYPOGRAPHY.spacing.listSpacing / TYPOGRAPHY.sizes.body);
       } else if (token.type === "code_block" || token.type === "fence") {
-        doc.moveDown(
-          TYPOGRAPHY.spacing.paragraphSpacing / TYPOGRAPHY.sizes.body,
-        );
-
-        doc
-          .font("Courier")
-          .fontSize(9)
-          .fillColor(TYPOGRAPHY.colors.text)
-          .text(token.content, {
-            indent: 20,
-            align: "left",
-          });
-
+        doc.moveDown(TYPOGRAPHY.spacing.paragraphSpacing / TYPOGRAPHY.sizes.body);
+        doc.font("Courier").fontSize(9).fillColor(TYPOGRAPHY.colors.text).text(token.content, {
+          indent: 20,
+          align: "left",
+        });
         doc.font(TYPOGRAPHY.fonts.serif).fontSize(TYPOGRAPHY.sizes.body);
-
-        doc.moveDown(
-          TYPOGRAPHY.spacing.paragraphSpacing / TYPOGRAPHY.sizes.body,
-        );
+        doc.moveDown(TYPOGRAPHY.spacing.paragraphSpacing / TYPOGRAPHY.sizes.body);
       } else if (token.type === "hr") {
         doc.moveDown();
         const y = doc.y;
-        doc
-          .moveTo(doc.page.margins.left, y)
+        doc.moveTo(doc.page.margins.left, y)
           .lineTo(doc.page.width - doc.page.margins.right, y)
           .stroke();
         doc.moveDown();
       }
     } catch (error) {
-      console.error("Error processsing token:", token.type, error);
+      console.error("Error processing token:", token.type, error);
       continue;
     }
   }
@@ -778,35 +627,30 @@ const exportAsPDF = async (req, res) => {
     }
 
     if (book.userId.toString() !== req.user._id.toString()) {
-      return res.status(404).json({ msg: "Book not authorized" });
+      return res.status(403).json({ msg: "Not authorized" });
     }
 
-    // create pdf with safe settings
-    const docs = new PDFDocument({
+    const doc = new PDFDocument({
       margins: { top: 72, bottom: 72, left: 72, right: 72 },
       bufferPages: true,
       autoFirstPage: true,
     });
 
-    //set headers before piping
-    res.setHeader("Content-Type", "applicatio/pdf");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment;filename="${book.title.replace(/[^a-zA-Z0-9]/g, "_")}.pdf"`,
-    );
+    const safeTitle = book.title.replace(/[^a-zA-Z0-9]/g, "_");
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${safeTitle}.pdf"`);
 
     doc.pipe(res);
 
-    //cover page with image if available
     if (book.coverImage && !book.coverImage.includes("pravatar")) {
-      const imagePath = book.coverImage.substring(1);
+      const imagePath = book.coverImage.startsWith("/")
+        ? book.coverImage.substring(1)
+        : book.coverImage;
 
       try {
         if (fs.existsSync(imagePath)) {
-          const pageWidth =
-            doc.page.width - doc.page.margins.left - doc.page.margins.right;
-          const pageHeight =
-            doc.page.height - doc.page.margins.top - doc.page.margins.bottom;
+          const pageWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+          const pageHeight = doc.page.height - doc.page.margins.top - doc.page.margins.bottom;
 
           doc.image(imagePath, doc.page.margins.left, doc.page.margins.top, {
             fit: [pageWidth * 0.8, pageHeight * 0.8],
@@ -816,11 +660,10 @@ const exportAsPDF = async (req, res) => {
           doc.addPage();
         }
       } catch (error) {
-        console.error(`could not embed image:${imagePath}`, error);
+        console.error(`Could not embed image: ${imagePath}`, error);
       }
     }
 
-    //Title Page
     doc
       .font(TYPOGRAPHY.fonts.sansBold)
       .fontSize(TYPOGRAPHY.sizes.title)
@@ -844,43 +687,33 @@ const exportAsPDF = async (req, res) => {
       .fillColor(TYPOGRAPHY.colors.text)
       .text(`by ${book.author}`, { align: "center" });
 
-    //Process Chapters
-
     if (book.chapters && book.chapters.length > 0) {
       book.chapters.forEach((chapter, index) => {
         try {
           doc.addPage();
 
-          //chapter title
-          (doc
+          doc
             .font(TYPOGRAPHY.fonts.sansBold)
             .fontSize(TYPOGRAPHY.sizes.chapterTitle)
             .fillColor(TYPOGRAPHY.colors.heading)
-            .text(chapter.title || `Chapter ${index + 1}`),
-            { align: "center" });
+            .text(chapter.title || `Chapter ${index + 1}`, { align: "center" });
 
-          doc.moveDown(
-            TYPOGRAPHY.spacing.chapterSpacing / TYPOGRAPHY.sizes.body,
-          );
+          doc.moveDown(TYPOGRAPHY.spacing.chapterSpacing / TYPOGRAPHY.sizes.body);
 
-          //chapterr contetn
           if (chapter.content && chapter.content.trim()) {
             renderMarkdown(doc, chapter.content);
           }
         } catch (error) {
-          console.error(`error processing chapter ${index}:`, error);
+          console.error(`Error processing chapter ${index}:`, error);
         }
       });
     }
 
-    //finalize the document
     doc.end();
   } catch (error) {
-    console.error("ERROr exporting PDF:", error);
+    console.error("Error exporting PDF:", error);
     if (!res.headersSent) {
-      res
-        .status(500)
-        .json({ msg: "Server error during PDF export", error: error.message });
+      res.status(500).json({ msg: "Server error during PDF export" });
     }
   }
 };
