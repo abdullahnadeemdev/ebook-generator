@@ -3,14 +3,14 @@ import ProtectedRoute from "./components/auth/ProtectedRoutes";
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import SignUpPage from "./pages/SignUpPage";
-import DashboardPage from "./pages//DashboardPage";
+import DashboardPage from "./pages/DashboardPage";
 import EditorPage from "./pages/EditorPage";
 import ViewBookPage from "./pages/ViewBookPage";
 import ProfilePage from "./pages/ProfilePage";
 
 function App() {
   return (
-    <div className="text-green-900 text-3xl">
+    <div>
       <Routes>
         {/* Public ROutes */}
 
